@@ -17,12 +17,12 @@ build_config = { cmd = "mkdir -p $WD ; TASK=BUILD_CONFIG pixi run log_commit ; c
 demo = { cmd = "cd $WD ; TASK=DEMO pixi run log_commit ; python $PIXI_PROJECT_ROOT/source/s01_demo/run.py --config demo_config.yaml", env = { WD = "runs/example"}, depends_on=["cache_status", "source_status"]}
 
 [dependencies]
-python = "3.12"
+python = ">=3.12.7,<3.13"
 scikit-image = ">=0.24.0,<0.25"
-matplotlib = ">=3.9.1,<4"
-pandas = ">=2.2.2,<3"
-faim-ipa = ">=0.8.0,<0.9"
-rich = ">=13.9.1,<14"
+matplotlib = ">=3.9.2,<3.10"
+pandas = ">=2.2.3,<2.3"
+faim-ipa = ">=0.9.1,<0.10"
+rich = ">=13.9.4,<13.10"
 
 [feature.docs.dependencies]
 mkdocs = ">=1.6.0,<2"
