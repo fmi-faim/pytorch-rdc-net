@@ -18,6 +18,3 @@ Then to run the demo script:
 ```bash
 pixi run demo
 ```
-
-
-
