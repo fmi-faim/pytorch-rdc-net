@@ -3,13 +3,15 @@ name = "Pytorch Rdc-Net"
 version = "0.1.0"
 description = "Add a short description here"
 authors = ["Tim-Oliver Buchholz <tim-oliver.buchholz@fmi.ch>"]
-channels = ["nvidia", "conda-forge", "pytorch", "bioconda"]
+channels = ["nvidia", "conda-forge", "bioconda"]
 platforms = ["linux-64"]
 
 [system-requirements]
+cuda = "12.7"
 # See https://pixi.sh/latest/features/system_requirements/#default-system-requirements
 
 [tasks]
+cuda_available = { cmd = "python -c 'import torch; print(torch.cuda.is_available())'" }
 cache_status = "python -m faim_ipa.pixi.cache_status"
 source_status = "python -m faim_ipa.pixi.src_status source"
 log_commit = {cmd = 'python -m faim_ipa.pixi.log_commit $TASK', env = {TASK = ""}}
@@ -23,11 +25,9 @@ matplotlib = ">=3.9.2,<3.10"
 pandas = ">=2.2.3,<2.3"
 faim-ipa = ">=0.9.1,<0.10"
 rich = ">=13.9.4,<13.10"
-pytorch = { version = ">=2.4.0,<2.5", channel = "pytorch" }
-torchvision = { version = ">=0.19.0,<0.20", channel = "pytorch" }
-pytorch-cuda = { version = ">=11.8,<11.9", channel = "pytorch" }
 pytorch-lightning = ">=2.4.0,<3"
 monai = ">=1.4.0,<2"
+pytorch = ">=2.5.1,<3"
 
 [feature.docs.dependencies]
 mkdocs = ">=1.6.0,<2"
