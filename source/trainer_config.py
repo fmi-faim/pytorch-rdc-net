@@ -24,3 +24,10 @@ class TrainerConfig(IPAConfig):
         ).ask()
 
         self.save()
+
+
+if __name__ == "__main__":
+    config = TrainerConfig()
+    config.prompt()
+
+    config.save()
