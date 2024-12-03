@@ -237,3 +237,6 @@ runs/**/*.html
 
 # include githash.log
 !**/githash.log
+
+# lightning_logs
+runs/**/lightning_logs/**
