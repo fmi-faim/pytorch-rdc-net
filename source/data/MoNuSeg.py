@@ -21,7 +21,7 @@ class MoNuSegDataset(Dataset):
 
     def __len__(self):
         if self.key == "Train":
-            return 3 * 1000
+            return 3 * 100
         else:
             return len(self.images)
 
