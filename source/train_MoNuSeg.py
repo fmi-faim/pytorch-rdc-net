@@ -51,6 +51,7 @@ def main(
                 filename="rdcnet-{epoch:02d}-{f1:.2f}",
                 save_last=True,
             ),
+            pl.callbacks.LearningRateMonitor(logging_interval="epoch"),
         ],
     )
 
