@@ -3,6 +3,7 @@ import pytorch_lightning as pl
 
 import sys
 from faim_ipa.utils import get_git_root
+from torch import optim
 
 from source.matching import matching
 
@@ -363,4 +364,8 @@ class RDCNet2d(pl.LightningModule):
         return metrics.mean_true_score
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer=optimizer, T_max=self.trainer.max_epochs, eta_min=1e-5
+        )
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}
