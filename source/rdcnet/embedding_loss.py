@@ -16,7 +16,9 @@ class InstanceEmbeddingLoss(nn.Module):
 
         for y_patch, gt_patch in zip(y_pred, y_true):
             if torch.any(gt_patch > 0):
-                gt_one_hot = to_onehot(gt_patch, num_classes=gt_patch.max() + 1)[0, 1:]
+                gt_one_hot = to_onehot(
+                    gt_patch, num_classes=int(torch.max(gt_patch).item() + 1)
+                )[0, 1:]
                 counts = torch.sum(gt_one_hot, dim=(1, 2), keepdim=True)
                 centers = (
                     torch.sum(
