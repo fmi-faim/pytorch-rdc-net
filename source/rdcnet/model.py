@@ -167,6 +167,8 @@ class RDCNet2d(pl.LightningModule):
                 upp=shape,
             )
             votes[votes < self.hparams.min_votes_per_instance] = 0
+            votes[fg_mask == 0] = 0
+
             if votes.max() > 0:
                 # local maxima suppression
                 max_filtered = F.max_pool2d(
@@ -253,17 +255,24 @@ class RDCNet2d(pl.LightningModule):
         return train_loss
 
     def validation_step(self, batch, batch_idx):
-        with torch.no_grad():
-            x, gt_labels = batch
+        x, gt_labels = batch
+        gt = gt_labels.cpu().numpy()[0, 0]
+        if self.trainer.current_epoch > 10:
             embeddings, semantic_classes = self(x)
 
             instance_seg = self.get_instance_segmentations(embeddings, semantic_classes)
 
-        metrics = matching(
-            y_true=gt_labels.cpu().numpy()[0, 0],
-            y_pred=instance_seg.cpu().numpy(),
-            criterion="iou",
-        )
+            metrics = matching(
+                y_true=gt,
+                y_pred=instance_seg.cpu().numpy(),
+                criterion="iou",
+            )
+        else:
+            metrics = matching(
+                y_true=gt,
+                y_pred=np.zeros_like(gt),
+                criterion="iou",
+            )
 
         self.log(
             "precision",
