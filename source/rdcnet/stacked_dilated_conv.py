@@ -16,6 +16,7 @@ class StackedDilatedConv2d(nn.Conv2d):
             in_channels=len(dilation_rates) * out_channels,
             out_channels=out_channels,
             kernel_size=1,
+            groups=groups,
         )
 
     def forward(self, x):
