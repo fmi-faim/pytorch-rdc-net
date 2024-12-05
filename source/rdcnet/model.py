@@ -143,58 +143,63 @@ class RDCNet2d(pl.LightningModule):
         return np.stack(instance_segmentations)
 
     def get_instance_segmentations(self, embeddings, semantic):
-        embeddings = embeddings.detach()
-        semantic = semantic.detach()
+        with torch.no_grad():
+            embeddings = embeddings.detach()
+            semantic = semantic.detach()
 
-        # pad to catch instances with centers outside the image.
-        padding = self.hparams.margin * 2
-        embeddings = F.pad(embeddings, (padding, padding, padding, padding))
-        semantic = F.pad(semantic, (padding, padding, padding, padding))
+            # pad to catch instances with centers outside the image.
+            padding = self.hparams.margin * 2
+            embeddings = F.pad(embeddings, (padding, padding, padding, padding))
+            semantic = F.pad(semantic, (padding, padding, padding, padding))
 
-        shape = embeddings.shape[-2:]
+            shape = embeddings.shape[-2:]
 
-        fg_mask = torch.argmax(semantic[0], dim=0).type(torch.bool)
+            fg_mask = torch.argmax(semantic[0], dim=0).type(torch.bool)
 
-        grid = self._get_coordinate_grid(embeddings)
-        embeddings = (embeddings + grid)[0]
-        fg_embeddings = torch.round(embeddings[:, fg_mask])
+            grid = self._get_coordinate_grid(embeddings)
+            embeddings = (embeddings + grid)[0]
+            fg_embeddings = torch.round(embeddings[:, fg_mask])
 
-        votes = torchist.histogramdd(
-            fg_embeddings.moveaxis(0, -1),
-            bins=(shape[0], shape[1]),
-            low=(0, 0),
-            upp=shape,
-        )
-        votes[votes < self.hparams.min_votes_per_instance] = 0
-        if votes.max() > 0:
-            # local maxima suppression
-            max_filtered = F.max_pool2d(
-                votes.unsqueeze(0).type(torch.float32),
-                kernel_size=2 * self.hparams.margin + 1,
-                stride=1,
-                padding=self.hparams.margin,
-            )[0]
-            votes[votes > 0] += 1
-
-            # select embeddings which are less than margin away from any center
-            centers = torch.clip(votes - max_filtered, 0, 1).type(torch.bool)
-            center_coords = grid[0, :, centers]
-            dists = embeddings.unsqueeze(1) - center_coords.unsqueeze(-1).unsqueeze(-1)
-            dists = torch.norm(dists, dim=0, p=None)
-            dists = dists < self.hparams.margin
-
-            # Convert to instance labels and apply foreground mask
-            label_img = torch.concat([torch.zeros_like(dists[:1]), dists]).type(
-                torch.int32
+            votes = torchist.histogramdd(
+                fg_embeddings.moveaxis(0, -1),
+                bins=(shape[0], shape[1]),
+                low=(0, 0),
+                upp=shape,
             )
-            label_img = torch.argmax(label_img, dim=0) * fg_mask
-        else:
-            label_img = torch.zeros(shape, dtype=torch.int32, device=embeddings.device)
+            votes[votes < self.hparams.min_votes_per_instance] = 0
+            if votes.max() > 0:
+                # local maxima suppression
+                max_filtered = F.max_pool2d(
+                    votes.unsqueeze(0).type(torch.float32),
+                    kernel_size=2 * self.hparams.margin + 1,
+                    stride=1,
+                    padding=self.hparams.margin,
+                )[0]
+                votes[votes > 0] += 1
 
-        # Remove padding
-        label_img = label_img[padding:-padding, padding:-padding]
+                # select embeddings which are less than margin away from any center
+                centers = torch.clip(votes - max_filtered, 0, 1).type(torch.bool)
+                center_coords = grid[0, :, centers]
+                dists = embeddings.unsqueeze(1) - center_coords.unsqueeze(-1).unsqueeze(
+                    -1
+                )
+                dists = torch.norm(dists, dim=0, p=None)
+                dists = dists < self.hparams.margin
 
-        return label_img.cpu()
+                # Convert to instance labels and apply foreground mask
+                label_img = torch.concat([torch.zeros_like(dists[:1]), dists]).type(
+                    torch.int32
+                )
+                label_img = torch.argmax(label_img, dim=0) * fg_mask
+            else:
+                label_img = torch.zeros(
+                    shape, dtype=torch.int32, device=embeddings.device
+                )
+
+            # Remove padding
+            label_img = label_img[padding:-padding, padding:-padding]
+
+            return label_img.cpu()
 
     def _get_coordinate_grid(self, pred: torch.Tensor) -> torch.Tensor:
         """
@@ -248,10 +253,11 @@ class RDCNet2d(pl.LightningModule):
         return train_loss
 
     def validation_step(self, batch, batch_idx):
-        x, gt_labels = batch
-        embeddings, semantic_classes = self(x)
+        with torch.no_grad():
+            x, gt_labels = batch
+            embeddings, semantic_classes = self(x)
 
-        instance_seg = self.get_instance_segmentations(embeddings, semantic_classes)
+            instance_seg = self.get_instance_segmentations(embeddings, semantic_classes)
 
         metrics = matching(
             y_true=gt_labels.cpu().numpy()[0, 0],
