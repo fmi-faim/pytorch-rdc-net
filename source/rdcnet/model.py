@@ -257,7 +257,7 @@ class RDCNet2d(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x, gt_labels = batch
         gt = gt_labels.cpu().numpy()[0, 0]
-        if self.trainer.current_epoch > 10:
+        if self.trainer.current_epoch >= 10:
             embeddings, semantic_classes = self(x)
 
             instance_seg = self.get_instance_segmentations(embeddings, semantic_classes)
