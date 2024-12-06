@@ -4,6 +4,8 @@ import torch.nn as nn
 
 from ignite.utils import to_onehot
 
+from source.rdcnet.lovasz_losses import lovasz_hinge
+
 
 class InstanceEmbeddingLoss(nn.Module):
     def __init__(self, margin=0.1):
@@ -34,11 +36,7 @@ class InstanceEmbeddingLoss(nn.Module):
                 sigma = self.margin * (-2 * np.log(0.5)) ** -0.5
                 probs = torch.exp(-0.5 * (center_dist / sigma) ** 2)
 
-                intersection = torch.sum(gt_one_hot * probs, dim=(1, 2))
-                union = torch.sum(gt_one_hot + probs, dim=(1, 2)) - intersection
-
-                jaccard = 1.0 - (intersection + self.eps) / (union + self.eps)
-                losses.append(torch.mean(jaccard))
+                losses.append(lovasz_hinge(probs * 2 - 1, gt_one_hot))
 
         if len(losses) > 0:
             return torch.mean(torch.stack(losses))

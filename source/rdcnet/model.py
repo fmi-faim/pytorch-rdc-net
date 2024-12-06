@@ -6,11 +6,11 @@ from faim_ipa.utils import get_git_root
 from torch import optim
 
 from source.matching import matching
+from source.rdcnet.lovasz_losses import lovasz_softmax
 
 sys.path.append(str(get_git_root()))
 
 from source.rdcnet.embedding_loss import InstanceEmbeddingLoss
-from source.rdcnet.jaccard_loss import JaccardLoss
 from source.rdcnet.stacked_dilated_conv import StackedDilatedConv2d
 
 import torch
@@ -82,7 +82,7 @@ class RDCNet2d(pl.LightningModule):
         )
 
         self.embedding_loss = InstanceEmbeddingLoss(margin=self.hparams.margin)
-        self.semantic_loss = JaccardLoss()
+        self.semantic_loss = lovasz_softmax
 
         self.coords = None
 
@@ -226,7 +226,7 @@ class RDCNet2d(pl.LightningModule):
         embeddings += self._get_coordinate_grid(embeddings)
 
         embedding_loss = self.embedding_loss(embeddings, gt_labels)
-        semantic_loss = self.semantic_loss(semantic_classes, gt_labels)
+        semantic_loss = self.semantic_loss(semantic_classes, gt_labels > 0)
         train_loss = embedding_loss + semantic_loss
         self.log(
             "semantic_loss",
