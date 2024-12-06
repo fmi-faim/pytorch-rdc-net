@@ -64,10 +64,11 @@ def main(
         train_dataloaders=dm.train_dataloader(),
         val_dataloaders=dm.val_dataloader(),
     )
+    v_num = trainer.logger.version
 
     results = trainer.test(model, dataloaders=dm.test_dataloader(), ckpt_path="best")
 
-    with open(output_dir / "test_results.yaml", "w") as f:
+    with open(output_dir / f"{v_num}-test_results.yaml", "w") as f:
         yaml.safe_dump(results, f, indent=4, sort_keys=False)
 
 
