@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import torchstain
 from pytorch_lightning import LightningDataModule
 from skimage import measure
 from torch.utils.data import Dataset
@@ -13,9 +14,10 @@ class MoNuSegDataset(Dataset):
         self.key = key
         self.images = []
         self.labels = []
-
+        he_normalizer = torchstain.normalizers.MacenkoNormalizer(backend="numpy")
         for item in data:
-            img = np.moveaxis(item["image"], -1, 0).copy().astype(np.float32) / 255.0
+            norm, H, E = he_normalizer.normalize(item["image"], stains=True)
+            img = np.moveaxis(H, -1, 0).copy().astype(np.float32) / 255.0
             self.images.append(img)
             self.labels.append(measure.label(item["nucleus_masks"][np.newaxis]))
 

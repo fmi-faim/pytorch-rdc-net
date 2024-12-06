@@ -79,3 +79,4 @@ nbdev = { features = ["nbdev"], no-default-feature = true}
 [pypi-dependencies]
 pytorch-ignite = ">=0.5.1, <0.6"
 torchist = ">=0.2.3, <0.3"
+torchstain = ">=1.3.0, <2"

@@ -316,6 +316,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: https://files.pythonhosted.org/packages/6b/43/db683e79af5ba9dc79e97295d6c7b199856712be680ad1e6751d26413b3f/pytorch_ignite-0.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/59/f340823a5a07418e90d7861812014dc9b0df98c518aa33153ce0bd05ffe1/torchist-0.2.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ab/51/ee77606f3cedb5a788e2737bdcc9dd31c9156a4b59a102ff07299f574445/torchstain-1.3.0-py3-none-any.whl
   dev:
     channels:
     - url: https://conda.anaconda.org/nvidia/
@@ -632,6 +633,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: https://files.pythonhosted.org/packages/6b/43/db683e79af5ba9dc79e97295d6c7b199856712be680ad1e6751d26413b3f/pytorch_ignite-0.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/59/f340823a5a07418e90d7861812014dc9b0df98c518aa33153ce0bd05ffe1/torchist-0.2.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ab/51/ee77606f3cedb5a788e2737bdcc9dd31c9156a4b59a102ff07299f574445/torchstain-1.3.0-py3-none-any.whl
   docs:
     channels:
     - url: https://conda.anaconda.org/nvidia/
@@ -963,6 +965,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: https://files.pythonhosted.org/packages/6b/43/db683e79af5ba9dc79e97295d6c7b199856712be680ad1e6751d26413b3f/pytorch_ignite-0.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/59/f340823a5a07418e90d7861812014dc9b0df98c518aa33153ce0bd05ffe1/torchist-0.2.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ab/51/ee77606f3cedb5a788e2737bdcc9dd31c9156a4b59a102ff07299f574445/torchstain-1.3.0-py3-none-any.whl
   jupyter:
     channels:
     - url: https://conda.anaconda.org/nvidia/
@@ -1419,6 +1422,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: https://files.pythonhosted.org/packages/6b/43/db683e79af5ba9dc79e97295d6c7b199856712be680ad1e6751d26413b3f/pytorch_ignite-0.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/59/f340823a5a07418e90d7861812014dc9b0df98c518aa33153ce0bd05ffe1/torchist-0.2.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ab/51/ee77606f3cedb5a788e2737bdcc9dd31c9156a4b59a102ff07299f574445/torchstain-1.3.0-py3-none-any.whl
   nbdev:
     channels:
     - url: https://conda.anaconda.org/nvidia/
@@ -10033,6 +10037,16 @@ packages:
   - pkg:pypi/torchmetrics?source=hash-mapping
   size: 360134
   timestamp: 1731096998789
+- kind: pypi
+  name: torchstain
+  version: 1.3.0
+  url: https://files.pythonhosted.org/packages/ab/51/ee77606f3cedb5a788e2737bdcc9dd31c9156a4b59a102ff07299f574445/torchstain-1.3.0-py3-none-any.whl
+  sha256: bdc93fb9ad0ac67f4af630d7c9ae121caa388a202c022441b6cc2002dd9f0a26
+  requires_dist:
+  - numpy
+  - tensorflow ; extra == 'tf'
+  - torch ; extra == 'torch'
+  requires_python: '>=3.6'
 - kind: conda
   name: tornado
   version: 6.4.1
