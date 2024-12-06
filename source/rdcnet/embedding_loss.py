@@ -36,7 +36,7 @@ class InstanceEmbeddingLoss(nn.Module):
                 sigma = self.margin * (-2 * np.log(0.5)) ** -0.5
                 probs = torch.exp(-0.5 * (center_dist / sigma) ** 2)
 
-                losses.append(lovasz_hinge(probs * 2 - 1, gt_one_hot))
+                losses.append(lovasz_hinge(probs * 2 - 1, gt_one_hot, per_image=False))
 
         if len(losses) > 0:
             return torch.mean(torch.stack(losses))

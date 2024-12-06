@@ -228,7 +228,9 @@ class RDCNet2d(pl.LightningModule):
         embeddings += self._get_coordinate_grid(embeddings)
 
         embedding_loss = self.embedding_loss(embeddings, gt_labels)
-        semantic_loss = self.semantic_loss(semantic_classes, gt_labels > 0)
+        semantic_loss = self.semantic_loss(
+            semantic_classes, gt_labels > 0, per_image=False
+        )
         train_loss = embedding_loss + semantic_loss
         self.log(
             "semantic_loss",
