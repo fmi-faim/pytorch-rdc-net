@@ -24,17 +24,21 @@ def main(
     dm = MoNuSeg(
         dataset_path=get_git_root() / "raw_data" / "MoNuSeg_dataset.pth",
     )
-    model = RDCNet2d(
-        in_channels=rdcnet_config.in_channels,
-        down_sampling_factor=rdcnet_config.down_sampling_factor,
-        down_sampling_channels=rdcnet_config.down_sampling_channels,
-        spatial_dropout_p=rdcnet_config.spatial_dropout_p,
-        channels_per_group=rdcnet_config.channels_per_group,
-        n_groups=rdcnet_config.n_groups,
-        dilation_rates=rdcnet_config.dilation_rates,
-        steps=rdcnet_config.steps,
-        margin=rdcnet_config.margin,
-    )
+    if rdcnet_config.model_path is not None:
+        model = RDCNet2d.load_from_checkpoint(rdcnet_config.model_path)
+        model.start_val_metrics_epoch = 0
+    else:
+        model = RDCNet2d(
+            in_channels=rdcnet_config.in_channels,
+            down_sampling_factor=rdcnet_config.down_sampling_factor,
+            down_sampling_channels=rdcnet_config.down_sampling_channels,
+            spatial_dropout_p=rdcnet_config.spatial_dropout_p,
+            channels_per_group=rdcnet_config.channels_per_group,
+            n_groups=rdcnet_config.n_groups,
+            dilation_rates=rdcnet_config.dilation_rates,
+            steps=rdcnet_config.steps,
+            margin=rdcnet_config.margin,
+        )
 
     output_dir = get_git_root() / "processed_data" / Path(os.getcwd()).name
     output_dir.mkdir(exist_ok=True, parents=True)

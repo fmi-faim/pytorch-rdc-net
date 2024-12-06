@@ -1,8 +1,12 @@
+from pathlib import Path
+from typing import Optional
+
 import questionary
 from faim_ipa.utils import IPAConfig
 
 
 class RDCNetConfig(IPAConfig):
+    model_path: Optional[Path] = None
     in_channels: int = 1
     down_sampling_factor: int = 6
     down_sampling_channels: int = 8
@@ -19,77 +23,84 @@ class RDCNetConfig(IPAConfig):
         return "rdcnet_config.yaml"
 
     def prompt(self):
-        self.in_channels = int(
-            questionary.text(
-                "in_channels",
-                default=str(self.in_channels),
+        fine_tune = questionary.confirm("Fine tune?").ask()
+        if fine_tune:
+            self.model_path = questionary.path(
+                "Model path",
+                default=str(self.model_path),
             ).ask()
-        )
-        self.down_sampling_factor = int(
-            questionary.text(
-                "down_sampling_factor",
-                default=str(self.down_sampling_factor),
-            ).ask()
-        )
-        self.down_sampling_channels = int(
-            questionary.text(
-                "down_sampling_channels",
-                default=str(self.down_sampling_channels),
-            ).ask()
-        )
-        self.spatial_dropout_p = float(
-            questionary.text(
-                "spatial_dropout_p",
-                default=str(self.spatial_dropout_p),
-            ).ask()
-        )
-        self.channels_per_group = int(
-            questionary.text(
-                "channels_per_group",
-                default=str(self.channels_per_group),
-            ).ask()
-        )
-        self.n_groups = int(
-            questionary.text(
-                "n_groups",
-                default=str(self.n_groups),
-            ).ask()
-        )
-        self.dilation_rates = list(
-            map(
-                int,
+        else:
+            self.in_channels = int(
                 questionary.text(
-                    "dilation_rates",
-                    default=",".join(map(str, self.dilation_rates)),
-                )
-                .ask()
-                .split(","),
+                    "in_channels",
+                    default=str(self.in_channels),
+                ).ask()
             )
-        )
-        self.steps = int(
-            questionary.text(
-                "steps",
-                default=str(self.steps),
-            ).ask()
-        )
-        self.margin = int(
-            questionary.text(
-                "margin",
-                default=str(self.margin),
-            ).ask()
-        )
-        self.lr = float(
-            questionary.text(
-                "lr",
-                default=str(self.lr),
-            ).ask()
-        )
-        self.min_votes_per_instance = int(
-            questionary.text(
-                "min_votes_per_instance",
-                default=str(self.min_votes_per_instance),
-            ).ask()
-        )
+            self.down_sampling_factor = int(
+                questionary.text(
+                    "down_sampling_factor",
+                    default=str(self.down_sampling_factor),
+                ).ask()
+            )
+            self.down_sampling_channels = int(
+                questionary.text(
+                    "down_sampling_channels",
+                    default=str(self.down_sampling_channels),
+                ).ask()
+            )
+            self.spatial_dropout_p = float(
+                questionary.text(
+                    "spatial_dropout_p",
+                    default=str(self.spatial_dropout_p),
+                ).ask()
+            )
+            self.channels_per_group = int(
+                questionary.text(
+                    "channels_per_group",
+                    default=str(self.channels_per_group),
+                ).ask()
+            )
+            self.n_groups = int(
+                questionary.text(
+                    "n_groups",
+                    default=str(self.n_groups),
+                ).ask()
+            )
+            self.dilation_rates = list(
+                map(
+                    int,
+                    questionary.text(
+                        "dilation_rates",
+                        default=",".join(map(str, self.dilation_rates)),
+                    )
+                    .ask()
+                    .split(","),
+                )
+            )
+            self.steps = int(
+                questionary.text(
+                    "steps",
+                    default=str(self.steps),
+                ).ask()
+            )
+            self.margin = int(
+                questionary.text(
+                    "margin",
+                    default=str(self.margin),
+                ).ask()
+            )
+            self.lr = float(
+                questionary.text(
+                    "lr",
+                    default=str(self.lr),
+                ).ask()
+            )
+            self.min_votes_per_instance = int(
+                questionary.text(
+                    "min_votes_per_instance",
+                    default=str(self.min_votes_per_instance),
+                ).ask()
+            )
 
         self.save()
 

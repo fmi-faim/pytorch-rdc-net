@@ -39,6 +39,7 @@ class RDCNet2d(pl.LightningModule):
         margin: int = 10,
         lr: float = 0.001,
         min_votes_per_instance: int = 5,
+        start_val_metrics_epoch: int = 10,
     ):
         super(RDCNet2d, self).__init__()
         self.save_hyperparameters()
@@ -84,6 +85,7 @@ class RDCNet2d(pl.LightningModule):
         self.embedding_loss = InstanceEmbeddingLoss(margin=self.hparams.margin)
         self.semantic_loss = lovasz_softmax
 
+        self.start_val_metrics_epoch = start_val_metrics_epoch
         self.coords = None
 
     def forward(self, x):
@@ -257,7 +259,7 @@ class RDCNet2d(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x, gt_labels = batch
         gt = gt_labels.cpu().numpy()[0, 0]
-        if self.trainer.current_epoch >= 10:
+        if self.trainer.current_epoch >= self.start_val_metrics_epoch:
             embeddings, semantic_classes = self(x)
 
             instance_seg = self.get_instance_segmentations(embeddings, semantic_classes)
