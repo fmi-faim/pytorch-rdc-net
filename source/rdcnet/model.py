@@ -196,7 +196,7 @@ class RDCNet2d(pl.LightningModule):
                 label_img = torch.concat([torch.zeros_like(dists[:1]), dists]).type(
                     torch.int32
                 )
-                label_img = torch.argmax(label_img, dim=0) * fg_mask
+                label_img = torch.argmax(label_img, dim=0)
             else:
                 label_img = torch.zeros(
                     shape, dtype=torch.int32, device=embeddings.device
