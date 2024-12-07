@@ -17,7 +17,6 @@ class RDCNetConfig(IPAConfig):
     steps: int = 6
     margin: int = 10
     lr: float = 0.001
-    min_votes_per_instance: int = 5
 
     def config_name(self) -> str:
         return "rdcnet_config.yaml"
@@ -93,12 +92,6 @@ class RDCNetConfig(IPAConfig):
                 questionary.text(
                     "lr",
                     default=str(self.lr),
-                ).ask()
-            )
-            self.min_votes_per_instance = int(
-                questionary.text(
-                    "min_votes_per_instance",
-                    default=str(self.min_votes_per_instance),
                 ).ask()
             )
 

@@ -38,7 +38,6 @@ class RDCNet2d(pl.LightningModule):
         steps: int = 6,
         margin: int = 10,
         lr: float = 0.001,
-        min_votes_per_instance: int = 5,
         start_val_metrics_epoch: int = 10,
     ):
         super(RDCNet2d, self).__init__()
@@ -168,7 +167,7 @@ class RDCNet2d(pl.LightningModule):
                 low=(0, 0),
                 upp=shape,
             )
-            votes[votes < self.hparams.min_votes_per_instance] = 0
+            votes[votes < self.hparams.margin] = 0
             votes[fg_mask == 0] = 0
 
             if votes.max() > 0:

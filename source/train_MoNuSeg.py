@@ -38,7 +38,6 @@ def main(
             dilation_rates=rdcnet_config.dilation_rates,
             steps=rdcnet_config.steps,
             margin=rdcnet_config.margin,
-            min_votes_per_instance=rdcnet_config.min_votes_per_instance,
         )
 
     output_dir = get_git_root() / "processed_data" / Path(os.getcwd()).name
