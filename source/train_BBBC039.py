@@ -14,6 +14,7 @@ from source.rdcnet.model import RDCNet2d
 from source.data.BBBC039 import BBBC039
 from source.rdcnet_config import RDCNetConfig
 from source.trainer_config import TrainerConfig
+from source.util import get_short_git_commit_hash
 
 
 def main(
@@ -25,19 +26,27 @@ def main(
         img_dir=get_git_root() / "raw_data" / "BBBC039" / "images",
         label_dir=get_git_root() / "raw_data" / "BBBC039" / "masks",
     )
-    model = RDCNet2d(
-        in_channels=rdcnet_config.in_channels,
-        down_sampling_factor=rdcnet_config.down_sampling_factor,
-        down_sampling_channels=rdcnet_config.down_sampling_channels,
-        spatial_dropout_p=rdcnet_config.spatial_dropout_p,
-        channels_per_group=rdcnet_config.channels_per_group,
-        n_groups=rdcnet_config.n_groups,
-        dilation_rates=rdcnet_config.dilation_rates,
-        steps=rdcnet_config.steps,
-        margin=rdcnet_config.margin,
-    )
+    if rdcnet_config.model_path is not None:
+        model = RDCNet2d.load_from_checkpoint(rdcnet_config.model_path)
+        model.start_val_metrics_epoch = 0
+    else:
+        model = RDCNet2d(
+            in_channels=rdcnet_config.in_channels,
+            down_sampling_factor=rdcnet_config.down_sampling_factor,
+            down_sampling_channels=rdcnet_config.down_sampling_channels,
+            spatial_dropout_p=rdcnet_config.spatial_dropout_p,
+            channels_per_group=rdcnet_config.channels_per_group,
+            n_groups=rdcnet_config.n_groups,
+            dilation_rates=rdcnet_config.dilation_rates,
+            steps=rdcnet_config.steps,
+            margin=rdcnet_config.margin,
+        )
 
-    output_dir = get_git_root() / "processed_data" / Path(os.getcwd()).name
+    output_dir = (
+        get_git_root()
+        / "processed_data"
+        / f"{get_short_git_commit_hash()}_{Path(os.getcwd()).name}"
+    )
     output_dir.mkdir(exist_ok=True, parents=True)
 
     trainer = pl.Trainer(
@@ -52,6 +61,7 @@ def main(
                 filename="rdcnet-{epoch:02d}-{mean_true_score:.2f}",
                 save_last=True,
             ),
+            pl.callbacks.LearningRateMonitor(logging_interval="epoch"),
         ],
     )
 
@@ -60,10 +70,11 @@ def main(
         train_dataloaders=dm.train_dataloader(),
         val_dataloaders=dm.val_dataloader(),
     )
+    v_num = trainer.logger.version
 
     results = trainer.test(model, dataloaders=dm.test_dataloader(), ckpt_path="best")
 
-    with open(output_dir / "test_results.yaml", "w") as f:
+    with open(output_dir / f"{v_num}-test_results.yaml", "w") as f:
         yaml.safe_dump(results, f, indent=4, sort_keys=False)
 
 
