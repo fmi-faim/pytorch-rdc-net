@@ -14,6 +14,7 @@ from source.rdcnet.model import RDCNet2d
 from source.data.MoNuSeg import MoNuSeg
 from source.rdcnet_config import RDCNetConfig
 from source.trainer_config import TrainerConfig
+from source.util import get_short_git_commit_hash
 
 
 def main(
@@ -40,7 +41,11 @@ def main(
             margin=rdcnet_config.margin,
         )
 
-    output_dir = get_git_root() / "processed_data" / Path(os.getcwd()).name
+    output_dir = (
+        get_git_root()
+        / "processed_data"
+        / f"{get_short_git_commit_hash()}_{Path(os.getcwd()).name}"
+    )
     output_dir.mkdir(exist_ok=True, parents=True)
 
     trainer = pl.Trainer(
