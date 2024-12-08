@@ -74,11 +74,14 @@ class RDCNet2d(pl.LightningModule):
             groups=self.hparams.n_groups,
         )
 
-        self.out_conv = nn.ConvTranspose2d(
+        self.out_conv = nn.Conv2d(
             in_channels=self.hparams.channels_per_group * self.hparams.n_groups,
-            out_channels=4,
-            kernel_size=down_sampling_kernel,
-            stride=self.hparams.down_sampling_factor,
+            out_channels=4 * self.hparams.down_sampling_factor**2,
+            kernel_size=1,
+            stride=1,
+        )
+        self.px_shuffle = nn.PixelShuffle(
+            upscale_factor=self.hparams.down_sampling_factor,
         )
 
         self.embedding_loss = InstanceEmbeddingLoss(margin=self.hparams.margin)
@@ -123,6 +126,7 @@ class RDCNet2d(pl.LightningModule):
         state = F.leaky_relu(state)
 
         output = self.out_conv(state)
+        output = self.px_shuffle(output)
         output = output[:, :, : in_shape[-2], : in_shape[-1]]
         embeddings = output[:, :2]
         semantic_classes = F.softmax(output[:, 2:], dim=1)
