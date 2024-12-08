@@ -77,8 +77,9 @@ class RDCNet2d(pl.LightningModule):
         self.out_conv = nn.Conv2d(
             in_channels=self.hparams.channels_per_group * self.hparams.n_groups,
             out_channels=4 * self.hparams.down_sampling_factor**2,
-            kernel_size=1,
+            kernel_size=3,
             stride=1,
+            padding="same",
         )
         self.px_shuffle = nn.PixelShuffle(
             upscale_factor=self.hparams.down_sampling_factor,
