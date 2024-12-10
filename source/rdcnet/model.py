@@ -173,7 +173,7 @@ class RDCNet2d(pl.LightningModule):
                 low=(0, 0),
                 upp=shape,
             )
-            votes[votes < self.hparams.margin] = 0
+            votes[votes < max(5, self.hparams.margin)] = 0
             votes[fg_mask == 0] = 0
 
             if votes.max() > 0:
