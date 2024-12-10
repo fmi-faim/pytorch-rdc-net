@@ -3,6 +3,7 @@ import pytorch_lightning as pl
 
 import sys
 from faim_ipa.utils import get_git_root
+from ignite.utils import to_onehot
 from torch import optim
 
 from source.matching import matching
@@ -76,7 +77,7 @@ class RDCNet2d(pl.LightningModule):
 
         self.out_conv = nn.Conv2d(
             in_channels=self.hparams.channels_per_group * self.hparams.n_groups,
-            out_channels=4 * self.hparams.down_sampling_factor**2,
+            out_channels=5 * self.hparams.down_sampling_factor**2,
             kernel_size=3,
             stride=1,
             padding="same",
@@ -130,16 +131,17 @@ class RDCNet2d(pl.LightningModule):
         output = self.px_shuffle(output)
         output = output[:, :, : in_shape[-2], : in_shape[-1]]
         embeddings = output[:, :2]
-        semantic_classes = F.softmax(output[:, 2:], dim=1)
+        weights = output[:, 2:3]
+        semantic_classes = F.softmax(output[:, 3:], dim=1)
 
-        return embeddings, semantic_classes
+        return embeddings, weights, semantic_classes
 
     def predict_instances(self, x):
         self.eval()
         instance_segmentations = []
         with torch.no_grad():
             for patch in x:
-                embeddings, semantic = self(patch.unsqueeze(0).to(self.device))
+                embeddings, weights, semantic = self(patch.unsqueeze(0).to(self.device))
                 label_img = self.get_instance_segmentations(
                     embeddings,
                     semantic,
@@ -228,19 +230,44 @@ class RDCNet2d(pl.LightningModule):
 
         return self.coords
 
+    def weight_loss(self, weights, gt_labels):
+        losses = []
+        for y_w, gt_patch in zip(weights, gt_labels):
+            if torch.any(gt_patch > 0):
+                gt_one_hot = to_onehot(
+                    gt_patch, num_classes=int(torch.max(gt_patch).item() + 1)
+                )[0, 1:]
+                counts = torch.sum(gt_one_hot)
+                weights = torch.sum(y_w * gt_one_hot) / counts
+                losses.append((1 - weights) ** 2)
+
+        if len(losses) > 0:
+            return torch.mean(torch.stack(losses))
+        else:
+            return torch.tensor(0.0)
+
     def training_step(self, batch, batch_idx):
         x, gt_labels = batch
-        embeddings, semantic_classes = self(x)
+        embeddings, weights, semantic_classes = self(x)
         embeddings += self._get_coordinate_grid(embeddings)
 
-        embedding_loss = self.embedding_loss(embeddings, gt_labels)
+        embedding_loss = self.embedding_loss(embeddings, weights, gt_labels)
+        weight_loss = self.weight_loss(weights, gt_labels)
         semantic_loss = self.semantic_loss(
             semantic_classes, gt_labels > 0, per_image=True
         )
-        train_loss = embedding_loss + semantic_loss
+        train_loss = embedding_loss + semantic_loss + weight_loss
         self.log(
             "semantic_loss",
             semantic_loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+        )
+        self.log(
+            "weight_loss",
+            weight_loss,
             on_step=False,
             on_epoch=True,
             prog_bar=True,
@@ -268,7 +295,7 @@ class RDCNet2d(pl.LightningModule):
         x, gt_labels = batch
         gt = gt_labels.cpu().numpy()[0, 0]
         if self.trainer.current_epoch >= self.start_val_metrics_epoch:
-            embeddings, semantic_classes = self(x)
+            embeddings, weights, semantic_classes = self(x)
 
             instance_seg = self.get_instance_segmentations(embeddings, semantic_classes)
 
@@ -332,7 +359,7 @@ class RDCNet2d(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         x, gt_labels = batch
-        embeddings, semantic_classes = self(x)
+        embeddings, weights, semantic_classes = self(x)
 
         instance_seg = self.get_instance_segmentations(embeddings, semantic_classes)
 
