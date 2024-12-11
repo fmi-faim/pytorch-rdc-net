@@ -1,10 +1,11 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from ignite.utils import to_onehot
 
-from source.rdcnet.lovasz_losses import lovasz_hinge
+from source.rdcnet.lovasz_losses import lovasz_softmax
 
 
 class InstanceEmbeddingLoss(nn.Module):
@@ -40,7 +41,19 @@ class InstanceEmbeddingLoss(nn.Module):
                 sigma = self.margin * (-2 * np.log(0.5)) ** -0.5
                 probs = torch.exp(-0.5 * (center_dist / sigma) ** 2)
 
-                losses.append(lovasz_hinge(probs * 2 - 1, gt_one_hot, per_image=False))
+                bg = torch.clip(
+                    torch.ones_like(probs[:1]) - torch.sum(probs, dim=0, keepdim=True),
+                    0,
+                    1,
+                )
+
+                probs = F.softmax(torch.cat([bg, probs], dim=0), dim=0)
+
+                losses.append(
+                    lovasz_softmax(
+                        probs.unsqueeze(0), gt_patch.unsqueeze(0), per_image=False
+                    )
+                )
 
         if len(losses) > 0:
             return torch.mean(torch.stack(losses))
