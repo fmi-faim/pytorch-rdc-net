@@ -6,7 +6,7 @@ from faim_ipa.utils import get_git_root
 from torch import optim
 
 from source.matching import matching
-from source.rdcnet.lovasz_losses import lovasz_hinge
+from source.rdcnet.lovasz_losses import lovasz_softmax
 
 sys.path.append(str(get_git_root()))
 
@@ -76,7 +76,7 @@ class RDCNet2d(pl.LightningModule):
 
         self.out_conv = nn.Conv2d(
             in_channels=self.hparams.channels_per_group * self.hparams.n_groups,
-            out_channels=4 * self.hparams.down_sampling_factor**2,
+            out_channels=5 * self.hparams.down_sampling_factor**2,
             kernel_size=3,
             stride=1,
             padding="same",
@@ -86,7 +86,7 @@ class RDCNet2d(pl.LightningModule):
         )
 
         self.embedding_loss = InstanceEmbeddingLoss(margin=self.hparams.margin)
-        self.semantic_loss = lovasz_hinge
+        self.semantic_loss = lovasz_softmax
 
         self.start_val_metrics_epoch = start_val_metrics_epoch
         self.coords = None
@@ -131,7 +131,7 @@ class RDCNet2d(pl.LightningModule):
         output = output[:, :, : in_shape[-2], : in_shape[-1]]
         embeddings = output[:, :2]
         weights = F.sigmoid(output[:, 2:3])
-        semantic_classes = F.tanh(output[:, 3:])
+        semantic_classes = F.softmax(output[:, 3:], dim=1)
 
         return embeddings, weights, semantic_classes
 
@@ -161,7 +161,7 @@ class RDCNet2d(pl.LightningModule):
 
             shape = embeddings.shape[-2:]
 
-            fg_mask = semantic[0, 0] > 0
+            fg_mask = torch.argmax(semantic[0], dim=0).type(torch.bool)
 
             grid = self._get_coordinate_grid(embeddings)
             embeddings = (embeddings + grid)[0]
@@ -236,7 +236,7 @@ class RDCNet2d(pl.LightningModule):
 
         embedding_loss = self.embedding_loss(embeddings, weights, gt_labels)
         semantic_loss = self.semantic_loss(
-            semantic_classes, (gt_labels > 0).type(torch.uint8), per_image=True
+            semantic_classes, gt_labels > 0, per_image=True
         )
         train_loss = embedding_loss + semantic_loss
         self.log(
