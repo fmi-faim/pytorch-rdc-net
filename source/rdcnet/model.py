@@ -25,6 +25,28 @@ def calc_same_pad(size: int, k: int, s: int, d: int) -> int:
     return max((math.ceil(size / s) - 1) * s + (k - 1) * d + 1 - size, 0)
 
 
+class PixelClassifier(nn.Module):
+    def __init__(self, in_channels: int = 2, out_channels: int = 1, width: int = 5):
+        super(PixelClassifier, self).__init__()
+        self.fc1 = nn.Linear(in_channels, width)
+        self.fc2 = nn.Linear(width, width)
+        self.fc3 = nn.Linear(width, out_channels)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return F.tanh(x)
+
+    def flatten(self, data):
+        return torch.permute(data, (0, 2, 3, 1)).flatten(end_dim=-2)
+
+    def fold(self, data, shape=(2, 64, 64)):
+        return torch.permute(
+            torch.reshape(data, (-1, shape[1], shape[2], shape[0])), (0, 3, 1, 2)
+        )
+
+
 class RDCNet2d(pl.LightningModule):
     def __init__(
         self,
@@ -85,7 +107,9 @@ class RDCNet2d(pl.LightningModule):
             upscale_factor=self.hparams.down_sampling_factor,
         )
 
-        self.embedding_loss = InstanceEmbeddingLoss(margin=self.hparams.margin)
+        self.px_classifier = PixelClassifier(in_channels=2, out_channels=1, width=5)
+
+        self.embedding_loss = InstanceEmbeddingLoss(px_classifier=self.px_classifier)
         self.semantic_loss = lovasz_softmax
 
         self.start_val_metrics_epoch = start_val_metrics_epoch
@@ -155,7 +179,7 @@ class RDCNet2d(pl.LightningModule):
             semantic = semantic.detach()
 
             # pad to catch instances with centers outside the image.
-            padding = self.hparams.margin * 2
+            padding = 32
             embeddings = F.pad(embeddings, (padding, padding, padding, padding))
             semantic = F.pad(semantic, (padding, padding, padding, padding))
 
@@ -189,16 +213,26 @@ class RDCNet2d(pl.LightningModule):
                 # select embeddings which are less than margin away from any center
                 centers = torch.clip(votes - max_filtered, 0, 1).type(torch.bool)
                 center_coords = grid[0, :, centers]
-                dists = embeddings.unsqueeze(1) - center_coords.unsqueeze(-1).unsqueeze(
-                    -1
+                sims = torch.moveaxis(
+                    center_coords.unsqueeze(-1).unsqueeze(-1) - embeddings.unsqueeze(1),
+                    0,
+                    1,
                 )
-                dists = torch.norm(dists, dim=0, p=None)
+                probs = []
+                for sim in sims:
+                    probs.append(
+                        self.px_classifier.fold(
+                            self.px_classifier(
+                                self.px_classifier.flatten(sim.unsqueeze(0))
+                            ),
+                            (1,) + sim.shape[1:],
+                        )[:, 0]
+                    )
 
-                sigma = self.hparams.margin * (-2 * np.log(0.5)) ** -0.5
-                dists = torch.exp(-0.5 * (dists / sigma) ** 2) >= 0.5
+                probs = torch.concat(probs)
 
                 # Convert to instance labels and apply foreground mask
-                label_img = torch.concat([torch.zeros_like(dists[:1]), dists]).type(
+                label_img = torch.concat([torch.zeros_like(probs[:1]), probs > 0]).type(
                     torch.int32
                 )
                 label_img = torch.argmax(label_img, dim=0)
@@ -227,7 +261,7 @@ class RDCNet2d(pl.LightningModule):
             grid = grid.type(torch.float32)
             self.coords = grid.to(pred.device)
 
-        return self.coords
+        return self.coords.to(pred.device)
 
     def training_step(self, batch, batch_idx):
         x, gt_labels = batch
@@ -238,6 +272,7 @@ class RDCNet2d(pl.LightningModule):
         semantic_loss = self.semantic_loss(
             semantic_classes, gt_labels > 0, per_image=True
         )
+
         train_loss = embedding_loss + semantic_loss
         self.log(
             "semantic_loss",
