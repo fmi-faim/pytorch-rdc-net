@@ -221,18 +221,21 @@ class RDCNet2d(pl.LightningModule):
                 probs = []
                 for sim in sims:
                     probs.append(
-                        self.px_classifier.fold(
-                            self.px_classifier(
-                                self.px_classifier.flatten(sim.unsqueeze(0))
-                            ),
-                            (1,) + sim.shape[1:],
-                        )[:, 0]
+                        (
+                            self.px_classifier.fold(
+                                self.px_classifier(
+                                    self.px_classifier.flatten(sim.unsqueeze(0))
+                                ),
+                                (1,) + sim.shape[1:],
+                            )[:, 0]
+                            > 0
+                        ).type(torch.uint8)
                     )
 
                 probs = torch.concat(probs)
 
                 # Convert to instance labels and apply foreground mask
-                label_img = torch.concat([torch.zeros_like(probs[:1]), probs > 0]).type(
+                label_img = torch.concat([torch.zeros_like(probs[:1]), probs]).type(
                     torch.int32
                 )
                 label_img = torch.argmax(label_img, dim=0)
