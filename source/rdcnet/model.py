@@ -240,7 +240,7 @@ class RDCNet2d(pl.LightningModule):
             # Remove padding
             label_img = label_img[padding:-padding, padding:-padding]
 
-            return label_img.cpu()
+            return label_img.detach().cpu()
 
     def _get_coordinate_grid(self, pred: torch.Tensor) -> torch.Tensor:
         """

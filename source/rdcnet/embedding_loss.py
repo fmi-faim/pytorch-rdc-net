@@ -19,7 +19,7 @@ class InstanceEmbeddingLoss(nn.Module):
         for y_emb, y_w, gt_patch in zip(y_embeddings, y_weights, y_true):
             if torch.any(gt_patch > 0):
                 y_emb = F.pad(y_emb, (32, 32, 32, 32), value=0)
-                y_w = F.pad(torch.bernoulli(y_w), (32, 32, 32, 32), value=0)
+                y_w = F.pad(y_w, (32, 32, 32, 32), value=0)
                 gt_patch = F.pad(gt_patch, (32, 32, 32, 32), value=0)
                 gt_one_hot = to_onehot(
                     gt_patch, num_classes=int(torch.max(gt_patch).item() + 1)
