@@ -23,7 +23,7 @@ class InstanceEmbeddingLoss(nn.Module):
                 gt_one_hot = to_onehot(
                     gt_patch, num_classes=int(torch.max(gt_patch).item() + 1)
                 )[0, 1:]
-                counts = torch.sum(gt_one_hot, dim=(1, 2), keepdim=True) + 1e-6
+                counts = torch.sum(gt_one_hot, dim=(1, 2), keepdim=True).detach() + 1e-6
                 centers = (
                     torch.sum(
                         (gt_one_hot.unsqueeze(0) * y_emb.unsqueeze(1)),
@@ -31,7 +31,7 @@ class InstanceEmbeddingLoss(nn.Module):
                         keepdim=True,
                     )
                     / counts
-                )
+                ).detach()
 
                 sims = torch.moveaxis((centers - y_emb.unsqueeze(1)), 0, 1) / 32.0
                 sims = torch.clip(sims, -2.0, 2.0)
