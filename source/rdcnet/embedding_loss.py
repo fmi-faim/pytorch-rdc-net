@@ -13,25 +13,20 @@ class InstanceEmbeddingLoss(nn.Module):
         self.px_classifier = px_classifier
         self.eps = 1e-6
 
-    def forward(self, y_embeddings, y_weights, y_true):
+    def forward(self, y_embeddings, y_true):
         losses = []
 
-        for y_emb, y_w, gt_patch in zip(y_embeddings, y_weights, y_true):
+        for y_emb, gt_patch in zip(y_embeddings, y_true):
             if torch.any(gt_patch > 0):
                 y_emb = F.pad(y_emb, (32, 32, 32, 32), value=0)
-                y_w = F.pad(y_w, (32, 32, 32, 32), value=0)
                 gt_patch = F.pad(gt_patch, (32, 32, 32, 32), value=0)
                 gt_one_hot = to_onehot(
                     gt_patch, num_classes=int(torch.max(gt_patch).item() + 1)
                 )[0, 1:]
-                counts = torch.sum(gt_one_hot * y_w, dim=(1, 2), keepdim=True) + 1e-6
+                counts = torch.sum(gt_one_hot, dim=(1, 2), keepdim=True) + 1e-6
                 centers = (
                     torch.sum(
-                        (
-                            gt_one_hot.unsqueeze(0)
-                            * y_emb.unsqueeze(1)
-                            * y_w.unsqueeze(1)
-                        ),
+                        (gt_one_hot.unsqueeze(0) * y_emb.unsqueeze(1)),
                         dim=(2, 3),
                         keepdim=True,
                     )

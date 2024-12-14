@@ -98,7 +98,7 @@ class RDCNet2d(pl.LightningModule):
 
         self.out_conv = nn.Conv2d(
             in_channels=self.hparams.channels_per_group * self.hparams.n_groups,
-            out_channels=5 * self.hparams.down_sampling_factor**2,
+            out_channels=4 * self.hparams.down_sampling_factor**2,
             kernel_size=3,
             stride=1,
             padding="same",
@@ -154,17 +154,16 @@ class RDCNet2d(pl.LightningModule):
         output = self.px_shuffle(output)
         output = output[:, :, : in_shape[-2], : in_shape[-1]]
         embeddings = output[:, :2]
-        weights = F.sigmoid(output[:, 2:3])
-        semantic_classes = F.softmax(output[:, 3:], dim=1)
+        semantic_classes = F.softmax(output[:, 2:], dim=1)
 
-        return embeddings, weights, semantic_classes
+        return embeddings, semantic_classes
 
     def predict_instances(self, x):
         self.eval()
         instance_segmentations = []
         with torch.no_grad():
             for patch in x:
-                embeddings, weights, semantic = self(patch.unsqueeze(0).to(self.device))
+                embeddings, semantic = self(patch.unsqueeze(0).to(self.device))
                 label_img = self.get_instance_segmentations(
                     embeddings,
                     semantic,
@@ -261,10 +260,10 @@ class RDCNet2d(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         x, gt_labels = batch
-        embeddings, weights, semantic_classes = self(x)
+        embeddings, semantic_classes = self(x)
         embeddings += self._get_coordinate_grid(embeddings)
 
-        embedding_loss = self.embedding_loss(embeddings, weights, gt_labels)
+        embedding_loss = self.embedding_loss(embeddings, gt_labels)
         semantic_loss = self.semantic_loss(
             semantic_classes, gt_labels > 0, per_image=True
         )
@@ -300,7 +299,7 @@ class RDCNet2d(pl.LightningModule):
         x, gt_labels = batch
         gt = gt_labels.cpu().numpy()[0, 0]
         if self.trainer.current_epoch >= self.start_val_metrics_epoch:
-            embeddings, weights, semantic_classes = self(x)
+            embeddings, semantic_classes = self(x)
 
             instance_seg = self.get_instance_segmentations(embeddings, semantic_classes)
 
@@ -364,7 +363,7 @@ class RDCNet2d(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         x, gt_labels = batch
-        embeddings, weights, semantic_classes = self(x)
+        embeddings, semantic_classes = self(x)
 
         instance_seg = self.get_instance_segmentations(embeddings, semantic_classes)
 
