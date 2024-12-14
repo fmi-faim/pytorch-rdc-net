@@ -33,8 +33,8 @@ class InstanceEmbeddingLoss(nn.Module):
                     / counts
                 )
 
-                sims = torch.moveaxis((centers - y_emb.unsqueeze(1)), 0, 1)
-
+                sims = torch.moveaxis((centers - y_emb.unsqueeze(1)), 0, 1) / 32.0
+                sims = torch.clip(sims, -2.0, 2.0)
                 probs = self.px_classifier.fold(
                     self.px_classifier(self.px_classifier.flatten(sims)),
                     (1,) + sims.shape[2:],

@@ -217,6 +217,7 @@ class RDCNet2d(pl.LightningModule):
                     0,
                     1,
                 )
+                sims = torch.clip(sims, -2.0, 2.0)
                 label_img = torch.zeros(
                     shape, dtype=torch.int32, device=embeddings.device
                 )
