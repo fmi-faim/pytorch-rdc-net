@@ -7,7 +7,7 @@ channels = ["nvidia", "conda-forge", "bioconda"]
 platforms = ["linux-64"]
 
 [system-requirements]
-cuda = "12.7"
+cuda = "11.7"
 # See https://pixi.sh/latest/features/system_requirements/#default-system-requirements
 
 [tasks]
