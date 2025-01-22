@@ -1,0 +1,16 @@
+model_path: null
+in_channels: 1
+down_sampling_factor: 6
+down_sampling_channels: 16
+spatial_dropout_p: 0.1
+channels_per_group: 36
+n_groups: 4
+dilation_rates:
+- 1
+- 2
+- 4
+- 8
+- 16
+steps: 6
+margin: 10
+lr: 0.001
