@@ -13,10 +13,10 @@ class InstanceEmbeddingLoss(nn.Module):
         self.margin = margin
         self.eps = 1e-6
 
-    def forward(self, y_embeddings, y_weights, y_true):
+    def forward(self, y_embeddings, y_true):
         losses = []
 
-        for y_emb, y_w, gt_patch in zip(y_embeddings, y_weights, y_true):
+        for y_emb, gt_patch in zip(y_embeddings, y_true):
             if torch.any(gt_patch > 0):
                 gt_one_hot = to_onehot(
                     gt_patch, num_classes=int(torch.max(gt_patch).item() + 1)
@@ -27,7 +27,6 @@ class InstanceEmbeddingLoss(nn.Module):
                         (
                             gt_one_hot.unsqueeze(0)
                             * y_emb.unsqueeze(1)
-                            * y_w.unsqueeze(1)
                         ),
                         dim=(2, 3),
                         keepdim=True,
