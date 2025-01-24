@@ -76,7 +76,7 @@ class RDCNet2d(pl.LightningModule):
 
         self.out_conv = nn.Conv2d(
             in_channels=self.hparams.channels_per_group * self.hparams.n_groups,
-            out_channels=4,
+            out_channels=5,
             kernel_size=3,
             stride=1,
             padding="same",
@@ -130,9 +130,10 @@ class RDCNet2d(pl.LightningModule):
         )
         output = self.out_conv(state)
         embeddings = output[:, :2]
-        semantic_classes = F.softmax(output[:, 2:], dim=1)
+        sigma = output[:, 2:3]
+        semantic_classes = F.softmax(output[:, 3:], dim=1)
 
-        return embeddings, semantic_classes
+        return embeddings, sigma, semantic_classes
 
     def predict_instances(self, x):
         self.eval()
@@ -148,14 +149,16 @@ class RDCNet2d(pl.LightningModule):
 
         return np.stack(instance_segmentations)
 
-    def get_instance_segmentations(self, embeddings, semantic):
+    def get_instance_segmentations(self, embeddings, sigmas, semantic):
         with torch.no_grad():
             embeddings = embeddings.detach()
+            sigmas = sigmas.detach()
             semantic = semantic.detach()
 
             # pad to catch instances with centers outside the image.
             padding = self.hparams.margin * 2
             embeddings = F.pad(embeddings, (padding, padding, padding, padding))
+            sigmas = F.pad(sigmas, (padding, padding, padding, padding))
             semantic = F.pad(semantic, (padding, padding, padding, padding))
 
             shape = embeddings.shape[-2:]
@@ -188,13 +191,14 @@ class RDCNet2d(pl.LightningModule):
                 # select embeddings which are less than margin away from any center
                 centers = torch.clip(votes - max_filtered, 0, 1).type(torch.bool)
                 center_coords = grid[0, :, centers]
+                sigs = sigmas[0, 0, centers].unsqueeze(-1).unsqueeze(-1)
                 dists = embeddings.unsqueeze(1) - center_coords.unsqueeze(-1).unsqueeze(
                     -1
                 )
                 dists = torch.norm(dists, dim=0, p=None)
 
-                sigma = self.hparams.margin * (-2 * np.log(0.5)) ** -0.5
-                dists = torch.exp(-0.5 * (dists / sigma) ** 2) >= 0.5
+                # sigma = self.hparams.margin * (-2 * np.log(0.5)) ** -0.5
+                dists = torch.exp(-0.5 * (dists / sigs) ** 2) >= 0.5
 
                 # Convert to instance labels and apply foreground mask
                 label_img = torch.concat([torch.zeros_like(dists[:1]), dists]).type(
@@ -230,10 +234,10 @@ class RDCNet2d(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         x, gt_labels = batch
-        embeddings, semantic_classes = self(x)
+        embeddings, sigma, semantic_classes = self(x)
         embeddings += self._get_coordinate_grid(embeddings)
 
-        embedding_loss = self.embedding_loss(embeddings, gt_labels)
+        embedding_loss = self.embedding_loss(embeddings, sigma, gt_labels)
         semantic_loss = self.semantic_loss(
             semantic_classes, gt_labels > 0, per_image=True
         )
@@ -268,9 +272,9 @@ class RDCNet2d(pl.LightningModule):
         x, gt_labels = batch
         gt = gt_labels.cpu().numpy()[0, 0]
         if self.trainer.current_epoch >= self.start_val_metrics_epoch:
-            embeddings, semantic_classes = self(x)
+            embeddings, sigmas, semantic_classes = self(x)
 
-            instance_seg = self.get_instance_segmentations(embeddings, semantic_classes)
+            instance_seg = self.get_instance_segmentations(embeddings, sigmas, semantic_classes)
 
             metrics = matching(
                 y_true=gt,
@@ -332,9 +336,9 @@ class RDCNet2d(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         x, gt_labels = batch
-        embeddings, semantic_classes = self(x)
+        embeddings, sigmas, semantic_classes = self(x)
 
-        instance_seg = self.get_instance_segmentations(embeddings, semantic_classes)
+        instance_seg = self.get_instance_segmentations(embeddings, sigmas, semantic_classes)
 
         metrics = matching(
             y_true=gt_labels.cpu().numpy()[0, 0],
