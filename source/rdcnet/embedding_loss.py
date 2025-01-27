@@ -59,7 +59,7 @@ class InstanceEmbeddingLoss(nn.Module):
 
                 losses.append(
                     lovasz_hinge(probs * 2 - 1, gt_one_hot, per_image=False) +
-                    torch.mean(var_sigmas)
+                    torch.mean(var_sigmas) * 10
                 )
 
         if len(losses) > 0:
