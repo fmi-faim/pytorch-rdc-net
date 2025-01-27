@@ -44,13 +44,6 @@ class InstanceEmbeddingLoss(nn.Module):
                     )
                     / counts
                 )
-                min_sigma, max_sigma = 1.69, 6.79
-                sigmas = sigmas * (max_sigma - min_sigma) + min_sigma
-
-                center_dist = torch.norm(centers - y_emb.unsqueeze(1), dim=0)
-
-                # sigma = self.margin * (-2 * np.log(0.5)) ** -0.5
-                probs = torch.exp(-0.5 * (center_dist / sigmas) ** 2)
 
                 var_sigmas = torch.sum(
                     torch.pow(
@@ -58,6 +51,14 @@ class InstanceEmbeddingLoss(nn.Module):
                         2
                     ) * gt_one_hot.unsqueeze(0)
                 ) / counts
+
+                min_sigma, max_sigma = 1.69, 6.79
+                sigmas = sigmas * (max_sigma - min_sigma) + min_sigma
+
+                center_dist = torch.norm(centers - y_emb.unsqueeze(1), dim=0)
+
+                # sigma = self.margin * (-2 * np.log(0.5)) ** -0.5
+                probs = torch.exp(-0.5 * (center_dist / sigmas) ** 2)
 
                 losses.append(
                     lovasz_hinge(probs * 2 - 1, gt_one_hot, per_image=False) +
