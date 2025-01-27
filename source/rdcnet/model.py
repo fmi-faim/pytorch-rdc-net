@@ -130,7 +130,7 @@ class RDCNet2d(pl.LightningModule):
         )
         output = self.out_conv(state)
         embeddings = output[:, :2]
-        sigma = F.sigmoid(output[:, 2:3])
+        sigma = output[:, 2:3]
         semantic_classes = F.softmax(output[:, 3:], dim=1)
 
         return embeddings, sigma, semantic_classes
@@ -192,8 +192,6 @@ class RDCNet2d(pl.LightningModule):
                 centers = torch.clip(votes - max_filtered, 0, 1).type(torch.bool)
                 center_coords = grid[0, :, centers]
                 sigs = sigmas[0, 0, centers].unsqueeze(-1).unsqueeze(-1)
-                min_sigma, max_sigma = 1.69, 6.79
-                sigs = sigs * (max_sigma - min_sigma) + min_sigma
                 dists = embeddings.unsqueeze(1) - center_coords.unsqueeze(-1).unsqueeze(
                     -1
                 )

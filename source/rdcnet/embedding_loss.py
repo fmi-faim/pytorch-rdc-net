@@ -47,13 +47,10 @@ class InstanceEmbeddingLoss(nn.Module):
 
                 var_sigmas = torch.sum(
                     torch.pow(
-                        y_sig.unsqueeze(1) - sigmas,
+                        y_sig.unsqueeze(1) - sigmas.detach(),
                         2
                     ) * gt_one_hot.unsqueeze(0)
                 ) / counts
-
-                min_sigma, max_sigma = 1.69, 6.79
-                sigmas = sigmas * (max_sigma - min_sigma) + min_sigma
 
                 center_dist = torch.norm(centers - y_emb.unsqueeze(1), dim=0)
 
