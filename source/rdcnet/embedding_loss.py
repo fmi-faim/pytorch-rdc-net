@@ -33,23 +33,12 @@ class InstanceEmbeddingLoss(nn.Module):
                     )
                     / counts
                 )
-                sigmas = (
-                    torch.sum(
-                        (
-                            gt_one_hot.unsqueeze(0)
-                            * y_sig.unsqueeze(1)
-                        ),
-                        dim=(2, 3),
-                        keepdim=True,
-                    )
-                    / counts
-                )
+                instance_sigmas = gt_one_hot.unsqueeze(0) * y_sig.unsqueeze(1)
+                sigmas = torch.sum(instance_sigmas, dim=(2, 3),
+                                   keepdim=True) / counts
 
                 var_sigmas = torch.sum(
-                    torch.pow(
-                        y_sig.unsqueeze(1) - sigmas.detach(),
-                        2
-                    ) * gt_one_hot.unsqueeze(0)
+                    torch.pow((instance_sigmas - sigmas.detach()) * gt_one_hot, 2)
                 ) / counts
 
                 center_dist = torch.norm(centers - y_emb.unsqueeze(1), dim=0)

@@ -140,9 +140,10 @@ class RDCNet2d(pl.LightningModule):
         instance_segmentations = []
         with torch.no_grad():
             for patch in x:
-                embeddings, semantic = self(patch.unsqueeze(0).to(self.device))
+                embeddings, sigmas, semantic = self(patch.unsqueeze(0).to(self.device))
                 label_img = self.get_instance_segmentations(
                     embeddings,
+                    sigmas,
                     semantic,
                 )
                 instance_segmentations.append(label_img.cpu().numpy()[np.newaxis])
