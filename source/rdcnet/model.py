@@ -199,7 +199,7 @@ class RDCNet2d(pl.LightningModule):
                 dists = torch.norm(dists, dim=0, p=None)
 
                 # sigma = self.hparams.margin * (-2 * np.log(0.5)) ** -0.5
-                dists = torch.exp(-0.5 * (dists / sigs) ** 2) >= 0.5
+                dists = torch.exp(-0.5 * (dists / (sigs + 1e-6)) ** 2) >= 0.5
 
                 # Convert to instance labels and apply foreground mask
                 label_img = torch.concat([torch.zeros_like(dists[:1]), dists]).type(

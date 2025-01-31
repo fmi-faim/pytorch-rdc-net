@@ -44,7 +44,7 @@ class InstanceEmbeddingLoss(nn.Module):
                 center_dist = torch.norm(centers - y_emb.unsqueeze(1), dim=0)
 
                 # sigma = self.margin * (-2 * np.log(0.5)) ** -0.5
-                probs = torch.exp(-0.5 * (center_dist / sigmas[0]) ** 2)
+                probs = torch.exp(-0.5 * (center_dist / (sigmas[0] + 1e-6)) ** 2)
 
                 losses.append(
                     lovasz_hinge(probs * 2 - 1, gt_one_hot, per_image=False) +
