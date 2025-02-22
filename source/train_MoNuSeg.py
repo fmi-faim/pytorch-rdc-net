@@ -47,7 +47,6 @@ def main(
         / f"{get_short_git_commit_hash()}_{Path(os.getcwd()).name}"
     )
     output_dir.mkdir(exist_ok=True, parents=True)
-
     trainer = pl.Trainer(
         default_root_dir=output_dir,
         max_epochs=trainer_config.max_epochs,

@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import torch.nn as nn
 
@@ -24,31 +23,30 @@ class InstanceEmbeddingLoss(nn.Module):
                 counts = torch.sum(gt_one_hot, dim=(1, 2), keepdim=True)
                 centers = (
                     torch.sum(
-                        (
-                            gt_one_hot.unsqueeze(0)
-                            * y_emb.unsqueeze(1)
-                        ),
+                        (gt_one_hot.unsqueeze(0) * y_emb.unsqueeze(1)),
                         dim=(2, 3),
                         keepdim=True,
                     )
                     / counts
                 )
                 instance_sigmas = gt_one_hot.unsqueeze(0) * y_sig.unsqueeze(1)
-                sigmas = torch.sum(instance_sigmas, dim=(2, 3),
-                                   keepdim=True) / counts
+                sigmas = torch.sum(instance_sigmas, dim=(2, 3), keepdim=True) / counts
 
-                var_sigmas = torch.sum(
-                    torch.pow((instance_sigmas - sigmas.detach()) * gt_one_hot, 2)
-                ) / counts
+                var_sigmas = (
+                    torch.sum(
+                        torch.pow((instance_sigmas - sigmas.detach()) * gt_one_hot, 2)
+                    )
+                    / counts
+                )
 
                 center_dist = torch.norm(centers - y_emb.unsqueeze(1), dim=0)
 
                 # sigma = self.margin * (-2 * np.log(0.5)) ** -0.5
-                probs = torch.exp(-0.5 * (center_dist / (sigmas[0] + 1e-6)) ** 2)
+                probs = torch.exp(-1 * center_dist * torch.exp(sigmas * 10))
 
                 losses.append(
-                    lovasz_hinge(probs * 2 - 1, gt_one_hot, per_image=False) +
-                    torch.mean(var_sigmas)
+                    lovasz_hinge(probs * 2 - 1, gt_one_hot, per_image=False)
+                    + torch.mean(var_sigmas)
                 )
 
         if len(losses) > 0:

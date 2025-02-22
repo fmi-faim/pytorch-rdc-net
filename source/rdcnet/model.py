@@ -125,7 +125,7 @@ class RDCNet2d(pl.LightningModule):
         state = F.interpolate(
             state,
             size=(in_shape[-2], in_shape[-1]),
-            mode='bilinear',
+            mode="bilinear",
             align_corners=False,
         )
         output = self.out_conv(state)
@@ -168,13 +168,13 @@ class RDCNet2d(pl.LightningModule):
 
             grid = self._get_coordinate_grid(embeddings)
             embeddings = (embeddings + grid)[0]
-            fg_embeddings = torch.round(embeddings[:, fg_mask])
+            fg_embeddings = embeddings[:, fg_mask]
 
             votes = torchist.histogramdd(
                 fg_embeddings.moveaxis(0, -1),
                 bins=(shape[0], shape[1]),
                 low=(0, 0),
-                upp=shape,
+                upp=(shape[0], shape[1]),
             )
             votes[votes < self.hparams.margin] = 0
             votes[fg_mask == 0] = 0
@@ -196,10 +196,10 @@ class RDCNet2d(pl.LightningModule):
                 dists = embeddings.unsqueeze(1) - center_coords.unsqueeze(-1).unsqueeze(
                     -1
                 )
-                dists = torch.norm(dists, dim=0, p=None)
+                dists = torch.norm(dists, dim=0)
 
                 # sigma = self.hparams.margin * (-2 * np.log(0.5)) ** -0.5
-                dists = torch.exp(-0.5 * (dists / (sigs + 1e-6)) ** 2) >= 0.5
+                dists = torch.exp(-1 * dists * torch.exp(sigs * 10)) >= 0.5
 
                 # Convert to instance labels and apply foreground mask
                 label_img = torch.concat([torch.zeros_like(dists[:1]), dists]).type(
@@ -236,7 +236,7 @@ class RDCNet2d(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x, gt_labels = batch
         embeddings, sigma, semantic_classes = self(x)
-        embeddings += self._get_coordinate_grid(embeddings)
+        embeddings = embeddings + self._get_coordinate_grid(embeddings)
 
         embedding_loss = self.embedding_loss(embeddings, sigma, gt_labels)
         semantic_loss = self.semantic_loss(
@@ -275,7 +275,9 @@ class RDCNet2d(pl.LightningModule):
         if self.trainer.current_epoch >= self.start_val_metrics_epoch:
             embeddings, sigmas, semantic_classes = self(x)
 
-            instance_seg = self.get_instance_segmentations(embeddings, sigmas, semantic_classes)
+            instance_seg = self.get_instance_segmentations(
+                embeddings, sigmas, semantic_classes
+            )
 
             metrics = matching(
                 y_true=gt,
@@ -339,7 +341,9 @@ class RDCNet2d(pl.LightningModule):
         x, gt_labels = batch
         embeddings, sigmas, semantic_classes = self(x)
 
-        instance_seg = self.get_instance_segmentations(embeddings, sigmas, semantic_classes)
+        instance_seg = self.get_instance_segmentations(
+            embeddings, sigmas, semantic_classes
+        )
 
         metrics = matching(
             y_true=gt_labels.cpu().numpy()[0, 0],
