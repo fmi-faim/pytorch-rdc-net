@@ -7,18 +7,15 @@ channels = ["nvidia", "conda-forge", "pytorch", "bioconda"]
 platforms = ["linux-64"]
 
 [system-requirements]
-cuda = "11.7"
 # See https://pixi.sh/latest/features/system_requirements/#default-system-requirements
 
 [tasks]
-cuda_available = { cmd = "python -c 'import torch; print(torch.cuda.is_available())'" }
 cache_status = "python -m faim_ipa.pixi.cache_status"
 source_status = "python -m faim_ipa.pixi.src_status source"
 log_commit = {cmd = 'python -m faim_ipa.pixi.log_commit $TASK', env = {TASK = ""}}
 build_rdcnet_config = { cmd = "mkdir -p $WD ; TASK=BUILD_RDCNET_CONFIG pixi run log_commit ; cd $WD ; python $PIXI_PROJECT_ROOT/source/rdcnet_config.py", env = { WD = "runs/example"}, depends-on=["cache_status", "source_status"]}
 build_trainer_config = { cmd = "mkdir -p $WD ; TASK=BUILD_TRAINER_CONFIG pixi run log_commit ; cd $WD ; python $PIXI_PROJECT_ROOT/source/trainer_config.py", env = { WD = "runs/example"}, depends-on=["cache_status", "source_status"]}
-train_BBBC039 = { cmd = "TASK=TRAIN_BBBC039 pixi run log_commit ; cd $WD ; python $PIXI_PROJECT_ROOT/source/train_BBBC039.py --rdcnet_config rdcnet_config.yaml --trainer_config trainer_config.yaml",  env = { WD = "runs/example"}, depends-on=["cache_status", "source_status"] }
-train_MoNuSeg = { cmd = "TASK=TRAIN_MoNuSeg pixi run log_commit ; cd $WD ; python $PIXI_PROJECT_ROOT/source/train_MoNuSeg.py --rdcnet_config rdcnet_config.yaml --trainer_config trainer_config.yaml",  env = { WD = "runs/example"}, depends-on=["cache_status", "source_status"] }
+submit_train_MoNuSeg = { cmd = "TASK=SUBMIT_TRAIN_MONUSEG pixi run log_commit ; sbatch --account $ACCOUNT $PIXI_PROJECT_ROOT/source/slurm-job_train_MoNuSeg.sh $ACCOUNT $WD", env = { ACCOUNT = "", WD = "runs/example" }, depends-on=["source_status", "cache_status"]}
 
 [dependencies]
 python = "3.11.*"
@@ -33,7 +30,17 @@ ipykernel = ">=6.29.5,<7"
 numba = ">=0.60.0,<0.61"
 tensorboard = ">=2.18.0,<3"
 pytorch = {version=">=2.3.1,<2.4", channel="pytorch"}
+
+[feature.cuda.system-requirements]
+cuda = "11.7"
+
+[feature.cuda.dependencies]
 pytorch-cuda = {version="11.8.*", channel="pytorch"}
+
+[feature.cuda.tasks]
+cuda_available = { cmd = "python -c 'import torch; print(torch.cuda.is_available())'" }
+train_BBBC039 = { cmd = "TASK=TRAIN_BBBC039 pixi run log_commit ; cd $WD ; python $PIXI_PROJECT_ROOT/source/train_BBBC039.py --rdcnet_config rdcnet_config.yaml --trainer_config trainer_config.yaml",  env = { WD = "runs/example"}, depends-on=["cache_status", "source_status"] }
+train_MoNuSeg = { cmd = "TASK=TRAIN_MoNuSeg pixi run log_commit ; cd $WD ; python $PIXI_PROJECT_ROOT/source/train_MoNuSeg.py --rdcnet_config rdcnet_config.yaml --trainer_config trainer_config.yaml",  env = { WD = "runs/example"}, depends-on=["cache_status", "source_status"] }
 
 [feature.docs.dependencies]
 mkdocs = ">=1.6.0,<2"
@@ -72,6 +79,7 @@ nbdev = ">=2.2.10,<2.3"
 clean = "nbdev_clean --clear_all"
 
 [environments]
+cuda = { features = ["cuda"], solve-group="default" }
 docs = { features = ["docs"], solve-group="default" }
 dev = { features = ["dev"], solve-group="default" }
 jupyter = { features = ["jupyter"], solve-group="default" }
