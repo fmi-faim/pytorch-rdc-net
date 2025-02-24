@@ -1,2 +1,2 @@
-max_epochs: 100
+max_epochs: 400
 precision: 32-true
